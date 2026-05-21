@@ -14,6 +14,16 @@ const EnvSchema = z.object({
     .string()
     .default("false")
     .transform((v) => v === "true" || v === "1"),
+  /**
+   * When true (default), per-cam ticks are skipped entirely when Open-Meteo
+   * reports `is_day=false` for that cam's location — no scrape, no vision.
+   * Night panoramas are mostly dark and the vision spend isn't worth it.
+   * Flip to `false` to keep running 24/7 (e.g. to capture moonlit conditions).
+   */
+  SKIP_NIGHT: z
+    .string()
+    .default("true")
+    .transform((v) => v === "true" || v === "1"),
 });
 
 export const env = EnvSchema.parse(process.env);

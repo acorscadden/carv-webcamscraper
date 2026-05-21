@@ -55,6 +55,23 @@ async function runOneCam(camId: string): Promise<CamRunResult> {
     };
   }
   try {
+    // Weather first — it's free + cached — so we can bail out at night
+    // without burning a scrape + vision calls.
+    const forecast = await getCurrentWeather(cam.lat, cam.lng);
+    if (env.SKIP_NIGHT && forecast.isDay === false) {
+      logger.debug(
+        { webcam: cam.id },
+        "scheduler: skip (night, is_day=false)",
+      );
+      return {
+        webcamId: cam.id,
+        captureId: null,
+        visionResults: [],
+        skipped: true,
+        error: null,
+      };
+    }
+
     const scraper = scraperFor(cam);
     const scrape = await withTimeout(
       scraper.capture(cam),
@@ -71,8 +88,6 @@ async function runOneCam(camId: string): Promise<CamRunResult> {
         error: null,
       };
     }
-
-    const forecast = await getCurrentWeather(cam.lat, cam.lng);
 
     const captureId = insertCapture({
       webcamId: cam.id,
