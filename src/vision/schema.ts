@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// Each enum includes "unknown" so we can use .catch("unknown") on the field —
+// when the model returns a value outside the enum we degrade to "unknown"
+// instead of failing the entire parse and losing all the other fields.
+
 export const VisibilityLabelEnum = z.enum([
   "excellent",
   "good",
@@ -7,6 +11,7 @@ export const VisibilityLabelEnum = z.enum([
   "poor",
   "whiteout",
   "night",
+  "unknown",
 ]);
 
 export const ConditionsEnum = z.enum([
@@ -47,6 +52,7 @@ export const SunStateEnum = z.enum([
   "shaded",
   "no_sun",
   "night",
+  "unknown",
 ]);
 
 export const TimeOfDayEnum = z.enum([
@@ -56,6 +62,7 @@ export const TimeOfDayEnum = z.enum([
   "afternoon",
   "dusk",
   "night",
+  "unknown",
 ]);
 
 export const VisionResultSchema = z.object({
@@ -65,8 +72,8 @@ export const VisionResultSchema = z.object({
     .describe(
       "Estimated horizontal visibility in km from the cam. Null if night or unknowable.",
     ),
-  visibility_label: VisibilityLabelEnum,
-  conditions: ConditionsEnum,
+  visibility_label: VisibilityLabelEnum.catch("unknown"),
+  conditions: ConditionsEnum.catch("unknown"),
   cloud_cover_pct: z
     .number()
     .min(0)
@@ -78,15 +85,15 @@ export const VisionResultSchema = z.object({
     .describe(
       "Approximate elevation in meters above sea level where cloud base sits. Null if no clouds or fully fogged in.",
     ),
-  precipitation: PrecipitationEnum,
-  snow_surface: SnowSurfaceEnum,
+  precipitation: PrecipitationEnum.catch("unknown"),
+  snow_surface: SnowSurfaceEnum.catch("unknown"),
   recent_snowfall_cm: z
     .number()
     .nullable()
     .describe(
       "Estimated centimeters of recent fresh snow visible on slopes/trees. Null if not assessable.",
     ),
-  sun_state: SunStateEnum,
+  sun_state: SunStateEnum.catch("unknown"),
   lift_visible: z
     .boolean()
     .describe("Any ski lifts visible / running in the image."),
@@ -96,7 +103,7 @@ export const VisionResultSchema = z.object({
     .describe(
       "One sentence with anything noteworthy about the scene (e.g. 'sun on Matterhorn summit, valley fogged in'). Empty string if nothing stands out.",
     ),
-  time_of_day_inferred: TimeOfDayEnum,
+  time_of_day_inferred: TimeOfDayEnum.catch("unknown"),
   confidence_self: z
     .number()
     .min(0)
