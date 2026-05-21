@@ -1,0 +1,40 @@
+# dependencies
+node_modules
+
+# build output
+out
+dist
+*.tgz
+
+# code coverage
+coverage
+*.lcov
+
+# logs
+logs
+*.log
+bun-debug.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# env / secrets — keep .env.example in repo
+.env
+.env.*
+!.env.example
+*.local
+
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# editor / IDE
+.idea
+.vscode
+.zed
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local persisted state (SQLite DB + scraped panoramas)
+data/
