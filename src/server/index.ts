@@ -12,7 +12,7 @@ import {
 } from "../db/queries.ts";
 import { logger } from "../lib/logger.ts";
 import { VISION_MODELS } from "../vision/index.ts";
-import { renderDashboard } from "./dashboard.ts";
+import { renderDashboard, renderWebcamHistory } from "./dashboard.ts";
 import { apiKeyAuth } from "./middleware.ts";
 
 const app = new Hono();
@@ -33,6 +33,17 @@ app.get("/healthz", (c) => {
 
 app.get("/", (c) => c.redirect("/dashboard"));
 app.get("/dashboard", (c) => c.html(renderDashboard()));
+
+app.get("/webcam/:id", (c) => {
+  const id = c.req.param("id");
+  const cam = getWebcam(id);
+  if (!cam) return c.notFound();
+  const hoursRaw = Number(c.req.query("hours") ?? "24");
+  const hours = Number.isFinite(hoursRaw)
+    ? Math.max(1, Math.min(168, Math.floor(hoursRaw)))
+    : 24;
+  return c.html(renderWebcamHistory(id, hours));
+});
 
 // Image serving — no auth so dashboard <img> tags work even when API_KEY is set.
 app.get("/images/:camId/latest", async (c) => {
