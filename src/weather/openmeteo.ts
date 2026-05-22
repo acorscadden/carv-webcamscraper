@@ -9,6 +9,7 @@ const CurrentSchema = z.object({
   precipitation: z.number().nullable().optional(),
   weather_code: z.number().nullable().optional(),
   wind_speed_10m: z.number().nullable().optional(),
+  wind_direction_10m: z.number().nullable().optional(),
   is_day: z.number().nullable().optional(),
 });
 
@@ -17,9 +18,15 @@ const HourlySchema = z.object({
   visibility: z.array(z.number().nullable()).optional(),
 });
 
+const DailySchema = z.object({
+  time: z.array(z.string()).optional(),
+  snowfall_sum: z.array(z.number().nullable()).optional(),
+});
+
 const ResponseSchema = z.object({
   current: CurrentSchema.optional(),
   hourly: HourlySchema.optional(),
+  daily: DailySchema.optional(),
 });
 
 export interface CurrentWeather {
@@ -29,7 +36,10 @@ export interface CurrentWeather {
   precipitationMm: number | null;
   weatherCode: number | null;
   windKmh: number | null;
+  windDirectionDeg: number | null;
   visibilityM: number | null;
+  /** Today's total snowfall accumulation in cm (from daily.snowfall_sum). */
+  snowfallTodayCm: number | null;
   isDay: boolean | null;
 }
 
@@ -79,11 +89,13 @@ export async function getCurrentWeather(
   url.searchParams.set("longitude", String(lng));
   url.searchParams.set(
     "current",
-    "temperature_2m,cloud_cover,precipitation,weather_code,wind_speed_10m,is_day",
+    "temperature_2m,cloud_cover,precipitation,weather_code,wind_speed_10m,wind_direction_10m,is_day",
   );
   url.searchParams.set("hourly", "visibility");
+  url.searchParams.set("daily", "snowfall_sum");
   url.searchParams.set("forecast_days", "1");
   url.searchParams.set("past_days", "0");
+  url.searchParams.set("timezone", "auto");
 
   const res = await fetch(url, {
     headers: { "User-Agent": env.USER_AGENT },
@@ -101,7 +113,9 @@ export async function getCurrentWeather(
     precipitationMm: parsed.current?.precipitation ?? null,
     weatherCode: parsed.current?.weather_code ?? null,
     windKmh: parsed.current?.wind_speed_10m ?? null,
+    windDirectionDeg: parsed.current?.wind_direction_10m ?? null,
     visibilityM: pickHourlyVisibility(parsed.hourly),
+    snowfallTodayCm: parsed.daily?.snowfall_sum?.[0] ?? null,
     isDay:
       parsed.current?.is_day == null ? null : parsed.current.is_day === 1,
   };

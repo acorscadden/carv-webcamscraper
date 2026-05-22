@@ -84,4 +84,12 @@ CREATE TABLE IF NOT EXISTS resort_conditions (
 );
 CREATE INDEX IF NOT EXISTS idx_resort_conditions_time
   ON resort_conditions(resort, model, computed_at DESC);
+
+CREATE TABLE IF NOT EXISTS overrides (
+  resort     TEXT NOT NULL,
+  field      TEXT NOT NULL,
+  value_json TEXT NOT NULL,
+  set_at     INTEGER NOT NULL,
+  PRIMARY KEY (resort, field)
+);
 `;

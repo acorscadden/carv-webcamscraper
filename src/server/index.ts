@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
+import { buildCurrentConditions } from "../conditions/current.ts";
 import { env, PORT_EXPLICIT } from "../config/env.ts";
 import { ALL_WEBCAMS, getWebcam, RESORTS } from "../config/webcams.ts";
 import {
@@ -12,6 +13,12 @@ import {
 } from "../db/queries.ts";
 import { logger } from "../lib/logger.ts";
 import { VISION_MODELS } from "../vision/index.ts";
+import {
+  handleClearAll,
+  handleClearOverride,
+  handleSetOverride,
+  renderAdmin,
+} from "./admin.ts";
 import { renderDashboard, renderWebcamHistory } from "./dashboard.ts";
 import { apiKeyAuth } from "./middleware.ts";
 
@@ -33,6 +40,58 @@ app.get("/healthz", (c) => {
 
 app.get("/", (c) => c.redirect("/dashboard"));
 app.get("/dashboard", (c) => c.html(renderDashboard()));
+
+// ----- /current (consolidated current conditions) -----
+// Applies API_KEY auth when set; passthrough in local dev.
+app.use("/current", apiKeyAuth);
+app.get("/current", async (c) => {
+  const resortId = c.req.query("resort") ?? "zermatt";
+  const model = c.req.query("model");
+  const current = await buildCurrentConditions(
+    resortId,
+    model ? { model } : {},
+  );
+  if (!current) return c.json({ error: "unknown resort" }, 404);
+  return c.json(current);
+});
+
+// ----- /admin/current (overrides dashboard) -----
+app.get("/admin", (c) => c.redirect("/admin/current"));
+app.get("/admin/current", async (c) => {
+  const resortId = c.req.query("resort") ?? "zermatt";
+  const current = await buildCurrentConditions(resortId);
+  if (!current) return c.notFound();
+  return c.html(renderAdmin(current, resortId));
+});
+
+app.post("/admin/override", async (c) => {
+  const resortId = c.req.query("resort") ?? "zermatt";
+  const form = await c.req.parseBody();
+  const field = typeof form.field === "string" ? form.field : "";
+  const value = typeof form.value === "string" ? form.value : "";
+  const result = await handleSetOverride(resortId, field, value);
+  if (!result.ok) {
+    return c.html(
+      `<p style="font-family:sans-serif;padding:24px">Error: ${result.error}</p><p><a href="/admin/current?resort=${encodeURIComponent(resortId)}">Back</a></p>`,
+      400,
+    );
+  }
+  return c.redirect(`/admin/current?resort=${encodeURIComponent(resortId)}`);
+});
+
+app.post("/admin/override/clear", async (c) => {
+  const resortId = c.req.query("resort") ?? "zermatt";
+  const form = await c.req.parseBody();
+  const field = typeof form.field === "string" ? form.field : "";
+  if (field) handleClearOverride(resortId, field);
+  return c.redirect(`/admin/current?resort=${encodeURIComponent(resortId)}`);
+});
+
+app.post("/admin/override/clear-all", (c) => {
+  const resortId = c.req.query("resort") ?? "zermatt";
+  handleClearAll(resortId);
+  return c.redirect(`/admin/current?resort=${encodeURIComponent(resortId)}`);
+});
 
 app.get("/webcam/:id", (c) => {
   const id = c.req.param("id");

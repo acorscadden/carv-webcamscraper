@@ -31,6 +31,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 .idea
 .vscode
 .zed
+.claude
 
 # OS
 .DS_Store
