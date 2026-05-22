@@ -22,15 +22,19 @@ Pick the \`conditions\` label deterministically from observed cloud cover. Do no
 
 Twilight tip: ambient blue light with no direct sun is still daytime if no stars are visible. Once stars are visible, the scene is \`"clear"\` or \`"partly_cloudy"\` based on visible sky percentage.
 
-# sun_state — disambiguate carefully
-- \`"sunny"\`: direct sun lights at least part of the visible scene
-- \`"partly_sunny"\`: sun coming through thin or broken cloud
-- \`"diffuse"\`: daytime, uniform grey/overcast sky, bright but no directional sun
-- \`"shaded"\`: daytime, but the camera's view is on the dark side of a ridge (the rest of the world may be sunny)
-- \`"no_sun"\`: daytime with heavy cloud completely obscuring the sun's direction — bright-ish overcast
-- \`"night"\`: sun fully below horizon. ANY of: visible stars, moon, deep dark sky, valley/lift lights as the dominant light source → \`"night"\`. Twilight with stars = night.
+# sun_state — use scene-coverage thresholds (deterministic)
+Estimate what fraction of the VISIBLE GROUND/SLOPES/STRUCTURES (not sky) is in direct sunlight versus shadow. Then apply these thresholds:
 
-Critical rule: if it's nighttime by clock (per the captured_at timestamp) AND the sky is dark, ALWAYS use \`"night"\`. Do not pick \`"no_sun"\` for nighttime — \`"no_sun"\` is a *daytime* state.
+- ≥ 80% in direct sun → \`"sunny"\`
+- 30–80% in direct sun, rest in shadow or cloud-shadow → \`"partly_sunny"\` (this label covers both broken-cloud sun AND terrain-shadowed scenes — the *cause* of the shadow doesn't matter, the *coverage* does)
+- < 30% in direct sun, sky still bright → \`"shaded"\` (most of scene in shadow, sun exists somewhere outside the frame)
+- 0% direct sun, uniform grey/overcast sky, no crisp shadows visible → \`"diffuse"\`
+- 0% direct sun, scene noticeably dim under thick cloud → \`"no_sun"\`
+- Sun fully below horizon → \`"night"\` (see night rules below)
+
+Critical: "sunny" requires NEARLY THE WHOLE visible scene to be lit. If you see any substantial shadow zone on the slopes/foreground, the answer is \`"partly_sunny"\` or \`"shaded"\` — not \`"sunny"\`. A scene with the Matterhorn fully sunlit but the valley below in shadow → \`"partly_sunny"\` (or \`"shaded"\` if most of frame is the valley).
+
+Night handling: ANY of these → \`"night"\` — visible stars, moon, deep dark sky, valley/lift lights as the dominant light source. Twilight with visible stars = night. Do NOT pick \`"no_sun"\` at night; \`"no_sun"\` is a *daytime* state.
 
 # Visibility — calibrate against landmarks
 \`visibility_km\` is the *horizontal* distance you can see distinguishable terrain. Use the cam's elevation and known landmarks; do not invent precision.
@@ -211,6 +215,7 @@ Output (key fields):
 10. When an enum value genuinely cannot be determined, choose \`"unknown"\` only as a last resort.
 
 # Common mistakes to avoid
+- Don't pick \`sun_state: "sunny"\` when substantial shadow zones are visible in the scene. "Sunny" requires ≥80% scene coverage in direct sun. If the foreground is shadowed but the peaks are sunlit → \`"partly_sunny"\`. If most of the frame is shadowed with sun only on distant peaks → \`"shaded"\`.
 - Don't pick \`sun_state: "no_sun"\` at night. Night belongs to \`sun_state: "night"\` and \`time_of_day_inferred: "night"\`.
 - Don't return \`conditions: "unknown"\` just because the scene is dark. A starry night sky is \`"clear"\`. A cloudy night sky with no stars is \`"overcast"\`.
 - Don't return \`visibility_km: null\` if you can identify any landmark — use that landmark's distance as a visibility floor.
