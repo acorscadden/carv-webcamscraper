@@ -89,7 +89,10 @@ export async function analyseImage(args: {
         {
           type: "text",
           text: SYSTEM_PROMPT,
-          cache_control: { type: "ephemeral" },
+          // 1h TTL — our cron runs every 15min, so a 5-min cache expires
+          // between ticks. 1h costs 2× to write but pays back after 3 reads,
+          // and we get 4 reads per cam per hour even at single-resort scale.
+          cache_control: { type: "ephemeral", ttl: "1h" },
         },
       ],
       messages: [
