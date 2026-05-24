@@ -337,8 +337,12 @@ export function renderWebcamHistory(camId: string, hours: number): string {
 
   const captureBlocks = captures
     .map((c) => {
-      const haiku = c.reports.find((r) => r.model === VISION_MODELS.haiku);
-      const sonnet = c.reports.find((r) => r.model === VISION_MODELS.sonnet);
+      // Render every model report attached to the capture. Today that's
+      // just Haiku; historical captures may also have Sonnet rows from
+      // when A/B was active — show those too without hardcoding model IDs.
+      const orderedReports = [...c.reports].sort((a, b) =>
+        a.model.localeCompare(b.model),
+      );
       const firstReal = c.reports.find((r) => !r.error) ?? c.reports[0];
       const imgPathParts = c.imagePath.split("/");
       // imagePath shape: images/<cam>/<yyyy-mm-dd>/<filename>
@@ -355,8 +359,7 @@ export function renderWebcamHistory(camId: string, hours: number): string {
             <small>${fmtTs(c.capturedAt)} · ${esc(imgPathParts.at(-1) ?? "")}</small>
           </div>
           <div class="models">
-            ${haiku ? renderModelBlock(haiku) : ""}
-            ${sonnet ? renderModelBlock(sonnet) : ""}
+            ${orderedReports.map((r) => renderModelBlock(r)).join("")}
             ${
               firstReal
                 ? `<div class="forecast">

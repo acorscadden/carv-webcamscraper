@@ -10,9 +10,13 @@ import { weatherCodeLabel } from "../weather/openmeteo.ts";
 import { buildUserContext, SYSTEM_PROMPT } from "./prompt.ts";
 import { VisionResultSchema, type VisionResult } from "./schema.ts";
 
+// Only Haiku is active. Sonnet was used for A/B during prompt-tuning;
+// agreement on app-consumed fields (visibility) hit 92%+ and visibility_km
+// fully converged, so we dropped Sonnet to halve cost. Historical Sonnet
+// reports stay in the DB and remain queryable via the API.
+// To re-enable A/B, add: sonnet: "claude-sonnet-4-6".
 export const VISION_MODELS = {
   haiku: "claude-haiku-4-5",
-  sonnet: "claude-sonnet-4-6",
 } as const;
 
 export type VisionModelKey = keyof typeof VISION_MODELS;
@@ -20,7 +24,6 @@ export type VisionModelKey = keyof typeof VISION_MODELS;
 // Per-million-token list prices (USD), used to estimate per-call cost.
 const PRICE_PER_MTOK: Record<VisionModelKey, { in: number; out: number }> = {
   haiku: { in: 1, out: 5 },
-  sonnet: { in: 3, out: 15 },
 };
 
 let _client: Anthropic | null = null;
