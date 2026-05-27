@@ -205,6 +205,33 @@ export function getReportHistory(
   });
 }
 
+const latestCapturePerCamStmt = db.query<
+  {
+    webcam_id: string;
+    name: string;
+    captured_at: number;
+    source_ts: string | null;
+    image_path: string;
+  },
+  { $resort: string }
+>(`
+  SELECT w.id AS webcam_id, w.name AS name,
+         c.captured_at, c.source_ts, c.image_path
+  FROM webcams w
+  JOIN captures c ON c.id = (
+    SELECT id FROM captures
+    WHERE webcam_id = w.id
+    ORDER BY captured_at DESC
+    LIMIT 1
+  )
+  WHERE w.resort = $resort
+  ORDER BY w.id
+`);
+
+export function getLatestCapturesForResort(resort: string) {
+  return latestCapturePerCamStmt.all({ $resort: resort });
+}
+
 const insertResortConditionsStmt = db.prepare(`
   INSERT INTO resort_conditions (
     resort, computed_at, model, cam_count, cams_reporting,

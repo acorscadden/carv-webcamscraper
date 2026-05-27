@@ -6,6 +6,7 @@ import { env, PORT_EXPLICIT } from "../config/env.ts";
 import { ALL_WEBCAMS, getWebcam, RESORTS } from "../config/webcams.ts";
 import {
   getHealth,
+  getLatestCapturesForResort,
   getLatestReportForWebcam,
   getLatestResortConditions,
   getReportHistory,
@@ -167,6 +168,26 @@ api.get("/webcams", (c) =>
     })),
   }),
 );
+
+// Latest image URL + last-updated time for every cam in a resort (default zermatt).
+api.get("/webcams/latest", (c) => {
+  const resortId = c.req.query("resort") ?? "zermatt";
+  if (!(resortId in RESORTS)) return c.json({ error: "unknown resort" }, 404);
+  const origin = new URL(c.req.url).origin;
+  const rows = getLatestCapturesForResort(resortId);
+  return c.json({
+    resort: resortId,
+    count: rows.length,
+    webcams: rows.map((r) => ({
+      id: r.webcam_id,
+      name: r.name,
+      image_url: `${origin}/images/${r.webcam_id}/latest`,
+      last_updated_at: new Date(r.captured_at).toISOString(),
+      last_updated_ms: r.captured_at,
+      source_ts: r.source_ts,
+    })),
+  });
+});
 
 api.get("/webcams/:id/latest", (c) => {
   const cam = getWebcam(c.req.param("id"));
